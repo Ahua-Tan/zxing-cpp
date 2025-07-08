@@ -843,12 +843,12 @@ namespace Base256Encoder {
 //TODO: c++20
 static bool StartsWith(std::wstring_view s, std::wstring_view ss)
 {
-	return s.length() > ss.length() && s.compare(0, ss.length(), ss) == 0;
+        return s.length() >= ss.length() && s.compare(0, ss.length(), ss) == 0;
 }
 
 static bool EndsWith(std::wstring_view s, std::wstring_view ss)
 {
-	return s.length() > ss.length() && s.compare(s.length() - ss.length(), ss.length(), ss) == 0;
+        return s.length() >= ss.length() && s.compare(s.length() - ss.length(), ss.length(), ss) == 0;
 }
 
 ByteArray Encode(const std::wstring& msg)
