@@ -1,9 +1,9 @@
 /*
-* Copyright 2016 Nu-book Inc.
-* Copyright 2016 ZXing authors
-* Copyright 2020 Axel Waggershauser
-* Copyright 2023 gitlost
-*/
+ * Copyright 2016 Nu-book Inc.
+ * Copyright 2016 ZXing authors
+ * Copyright 2020 Axel Waggershauser
+ * Copyright 2023 gitlost
+ */
 // SPDX-License-Identifier: Apache-2.0
 
 #include "QRDetector.h"
@@ -31,7 +31,9 @@
 #ifdef PRINT_DEBUG
 #include "BitMatrixIO.h"
 #else
-#define printf(...){}
+#define printf(...) \
+	{ \
+	}
 #endif
 
 namespace ZXing::QRCode {
@@ -51,7 +53,7 @@ PatternView FindPattern(const PatternView& view)
 
 std::vector<ConcentricPattern> FindFinderPatterns(const BitMatrix& image, bool tryHarder)
 {
-	constexpr int MIN_SKIP         = 3;           // 1 pixel/module times 3 modules/center
+	constexpr int MIN_SKIP = 3;                   // 1 pixel/module times 3 modules/center
 	constexpr int MAX_MODULES_FAST = 20 * 4 + 17; // support up to version 20 for mobile clients
 
 	// Let's assume that the maximum version QR Code we support takes up 1/4 the height of the
@@ -111,7 +113,7 @@ FinderPatternSets GenerateFinderPatternSets(FinderPatterns& patterns)
 {
 	std::sort(patterns.begin(), patterns.end(), [](const auto& a, const auto& b) { return a.size < b.size; });
 
-	auto sets            = std::multimap<double, FinderPatternSet>();
+	auto sets = std::multimap<double, FinderPatternSet>();
 	auto squaredDistance = [](const auto* a, const auto* b) {
 		// The scaling of the distance by the b/a size ratio is a very coarse compensation for the shortening effect of
 		// the camera projection on slanted symbols. The fact that the size of the finder pattern is proportional to the
@@ -153,8 +155,8 @@ FinderPatternSets GenerateFinderPatternSets(FinderPatterns& patterns)
 				auto distBC = std::sqrt(distBC2);
 
 				// Make sure distAB and distBC don't differ more than reasonable
-				// TODO: make sure the constant 2 is not to conservative for reasonably tilted symbols
-				if (distAB > 2 * distBC || distBC > 2 * distAB)
+				// A larger threshold allows stronger perspective distortions
+				if (distAB > 3 * distBC || distBC > 3 * distAB)
 					continue;
 
 				// Estimate the module count and ignore this set if it can not result in a valid decoding
@@ -233,7 +235,7 @@ static DimensionEstimate EstimateDimension(const BitMatrix& image, ConcentricPat
 	auto moduleSize = (ms_a + ms_b) / 2;
 
 	int dimension = narrow_cast<int>(std::lround(distance(a, b) / moduleSize) + 7);
-	int error     = 1 - (dimension % 4);
+	int error = 1 - (dimension % 4);
 
 	return {dimension + error, moduleSize, std::abs(error)};
 }
@@ -296,11 +298,20 @@ static std::optional<PointF> LocateAlignmentPattern(const BitMatrix& image, int 
 {
 	log(estimate, 4);
 
-	for (auto d : {PointF{0, 0}, {0, -1}, {0, 1}, {-1, 0}, {1, 0}, {-1, -1}, {1, -1}, {1, 1}, {-1, 1},
+	for (auto d : {
+			 PointF{0, 0},
+			 {0, -1},
+			 {0, 1},
+			 {-1, 0},
+			 {1, 0},
+			 {-1, -1},
+			 {1, -1},
+			 {1, 1},
+			 {-1, 1},
 #if 1
-				   }) {
+		 }) {
 #else
-				   {0, -2}, {0, 2}, {-2, 0}, {2, 0}, {-1, -2}, {1, -2}, {-1, 2}, {1, 2}, {-2, -1}, {-2, 1}, {2, -1}, {2, 1}}) {
+			 {0, -2},      {0, 2},  {-2, 0}, {2, 0},  {-1, -2}, {1, -2},  {-1, 2}, {1, 2}, {-2, -1}, {-2, 1}, {2, -1}, {2, 1}}) {
 #endif
 		auto cor = CenterOfRing(image, PointI(estimate + moduleSize * 2.25 * d), moduleSize * 3, 1, false);
 
@@ -345,7 +356,7 @@ static const Version* ReadVersion(const BitMatrix& image, int dimension, const P
 
 DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 {
-	auto top  = EstimateDimension(image, fp.tl, fp.tr);
+	auto top = EstimateDimension(image, fp.tl, fp.tr);
 	auto left = EstimateDimension(image, fp.tl, fp.bl);
 
 	if (!top.dim && !left.dim)
@@ -393,7 +404,7 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 	log(br, 3);
 	auto mod2Pix = Mod2Pix(dimension, brOffset, {fp.tl, fp.tr, br, fp.bl});
 
-	if( dimension >= Version::SymbolSize(7, Type::Model2).x) {
+	if (dimension >= Version::SymbolSize(7, Type::Model2).x) {
 		auto version = ReadVersion(image, dimension, mod2Pix);
 
 		// if the version bits are garbage -> discard the detection
@@ -407,7 +418,7 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 
 #if 1 // finding and evaluating the alignment patterns to enable a tiled sampling of the symbol
 
-		auto& apM = version->alignmentPatternCenters(); // alignment pattern positions in modules
+		auto& apM = version->alignmentPatternCenters();                 // alignment pattern positions in modules
 		auto apP = Matrix<std::optional<PointF>>(Size(apM), Size(apM)); // found/guessed alignment pattern positions in pixels
 		const int N = Size(apM) - 1;
 
@@ -426,7 +437,7 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 		findInnerCornerOfConcentricPattern(0, N, fp.bl);
 		findInnerCornerOfConcentricPattern(N, 0, fp.tr);
 
-		auto bestGuessAPP = [&](int x, int y){
+		auto bestGuessAPP = [&](int x, int y) {
 			if (auto p = apP(x, y))
 				return *p;
 			return projectM2P(x, y);
@@ -452,12 +463,12 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 				// find the two closest valid alignment pattern pixel positions both horizontally and vertically
 				std::vector<PointF> hori, verti;
 				for (int i = 2; i < 2 * N + 2 && Size(hori) < 2; ++i) {
-					int xi = x + i / 2 * (i%2 ? 1 : -1);
+					int xi = x + i / 2 * (i % 2 ? 1 : -1);
 					if (0 <= xi && xi <= N && apP(xi, y))
 						hori.push_back(*apP(xi, y));
 				}
 				for (int i = 2; i < 2 * N + 2 && Size(verti) < 2; ++i) {
-					int yi = y + i / 2 * (i%2 ? 1 : -1);
+					int yi = y + i / 2 * (i % 2 ? 1 : -1);
 					if (0 <= yi && yi <= N && apP(x, yi))
 						verti.push_back(*apP(x, yi));
 				}
@@ -467,7 +478,8 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 					auto guessed = intersect(RegressionLine(hori[0], hori[1]), RegressionLine(verti[0], verti[1]));
 					auto found = LocateAlignmentPattern(image, moduleSize, guessed);
 					// search again near that intersection and if the search fails, use the intersection
-					if (!found) printf("location guessed at %dx%d\n", x, y);
+					if (!found)
+						printf("location guessed at %dx%d\n", x, y);
 					apP.set(x, y, found ? *found : guessed);
 				}
 			}
@@ -510,11 +522,11 @@ DetectorResult SampleQR(const BitMatrix& image, const FinderPatternSet& fp)
 }
 
 /**
-* This method detects a code in a "pure" image -- that is, pure monochrome image
-* which contains only an unrotated, unskewed, image of a code, with some white border
-* around it. This is a specialized method that works exceptionally fast in this special
-* case.
-*/
+ * This method detects a code in a "pure" image -- that is, pure monochrome image
+ * which contains only an unrotated, unskewed, image of a code, with some white border
+ * around it. This is a specialized method that works exceptionally fast in this special
+ * case.
+ */
 DetectorResult DetectPureQR(const BitMatrix& image)
 {
 	using Pattern = std::array<PatternView::value_type, PATTERN.size()>;
@@ -528,7 +540,7 @@ DetectorResult DetectPureQR(const BitMatrix& image)
 	int left, top, width, height;
 	if (!image.findBoundingBox(left, top, width, height, MIN_MODULES) || std::abs(width - height) > 1)
 		return {};
-	int right  = left + width - 1;
+	int right = left + width - 1;
 	int bottom = top + height - 1;
 
 	PointI tl{left, top}, tr{right, top}, bl{left, bottom};
@@ -545,9 +557,9 @@ DetectorResult DetectPureQR(const BitMatrix& image)
 		EstimateDimension(image, {tl + fpWidth / 2 * PointF(1, 1), fpWidth}, {tr + fpWidth / 2 * PointF(-1, 1), fpWidth}).dim;
 
 	float moduleSize = float(width) / dimension;
-	if (!Version::IsValidSize({dimension, dimension}, Type::Model2) ||
-		!image.isIn(PointF{left + moduleSize / 2 + (dimension - 1) * moduleSize,
-						   top + moduleSize / 2 + (dimension - 1) * moduleSize}))
+	if (!Version::IsValidSize({dimension, dimension}, Type::Model2)
+		|| !image.isIn(
+			PointF{left + moduleSize / 2 + (dimension - 1) * moduleSize, top + moduleSize / 2 + (dimension - 1) * moduleSize}))
 		return {};
 
 #ifdef PRINT_DEBUG
@@ -572,7 +584,7 @@ DetectorResult DetectPureMQR(const BitMatrix& image)
 	int left, top, width, height;
 	if (!image.findBoundingBox(left, top, width, height, MIN_MODULES) || std::abs(width - height) > 1)
 		return {};
-	int right  = left + width - 1;
+	int right = left + width - 1;
 	int bottom = top + height - 1;
 
 	// allow corners be moved one pixel inside to accommodate for possible aliasing artifacts
@@ -584,9 +596,9 @@ DetectorResult DetectPureMQR(const BitMatrix& image)
 	float moduleSize = float(fpWidth) / 7;
 	int dimension = narrow_cast<int>(std::lround(width / moduleSize));
 
-	if (!Version::IsValidSize({dimension, dimension}, Type::Micro) ||
-		!image.isIn(PointF{left + moduleSize / 2 + (dimension - 1) * moduleSize,
-						   top + moduleSize / 2 + (dimension - 1) * moduleSize}))
+	if (!Version::IsValidSize({dimension, dimension}, Type::Micro)
+		|| !image.isIn(
+			PointF{left + moduleSize / 2 + (dimension - 1) * moduleSize, top + moduleSize / 2 + (dimension - 1) * moduleSize}))
 		return {};
 
 #ifdef PRINT_DEBUG
@@ -620,7 +632,7 @@ DetectorResult DetectPureRMQR(const BitMatrix& image)
 	int left, top, width, height;
 	if (!image.findBoundingBox(left, top, width, height, MIN_MODULES) || height >= width)
 		return {};
-	int right  = left + width - 1;
+	int right = left + width - 1;
 	int bottom = top + height - 1;
 
 	PointI tl{left, top}, tr{right, top}, br{right, bottom}, bl{left, bottom};
@@ -675,7 +687,8 @@ DetectorResult SampleMQR(const BitMatrix& image, const ConcentricPattern& fp)
 
 	auto srcQuad = Rectangle(7, 7, 0.5);
 
-#if defined(_MSVC_LANG) // TODO: see MSVC issue https://developercommunity.visualstudio.com/t/constexpr-object-is-unable-to-be-used-as/10035065
+#if defined(_MSVC_LANG) // TODO: see MSVC issue
+						// https://developercommunity.visualstudio.com/t/constexpr-object-is-unable-to-be-used-as/10035065
 	static
 #else
 	constexpr
@@ -739,10 +752,8 @@ DetectorResult SampleRMQR(const BitMatrix& image, const ConcentricPattern& fp)
 
 	static const PointI FORMAT_INFO_EDGE_COORDS[] = {{8, 0}, {9, 0}, {10, 0}, {11, 0}};
 	static const PointI FORMAT_INFO_COORDS[] = {
-		{11, 3}, {11, 2}, {11, 1},
-		{10, 5}, {10, 4}, {10, 3}, {10, 2}, {10, 1},
-		{ 9, 5}, { 9, 4}, { 9, 3}, { 9, 2}, { 9, 1},
-		{ 8, 5}, { 8, 4}, { 8, 3}, { 8, 2}, { 8, 1},
+		{11, 3}, {11, 2}, {11, 1}, {10, 5}, {10, 4}, {10, 3}, {10, 2}, {10, 1}, {9, 5},
+		{9, 4},  {9, 3},  {9, 2},  {9, 1},  {8, 5},  {8, 4},  {8, 3},  {8, 2},  {8, 1},
 	};
 
 	FormatInformation bestFI;

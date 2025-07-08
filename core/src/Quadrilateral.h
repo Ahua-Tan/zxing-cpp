@@ -1,6 +1,6 @@
 /*
-* Copyright 2020 Axel Waggershauser
-*/
+ * Copyright 2020 Axel Waggershauser
+ */
 // SPDX-License-Identifier: Apache-2.0
 
 #pragma once
@@ -19,14 +19,14 @@ class Quadrilateral : public std::array<T, 4>
 {
 	using Base = std::array<T, 4>;
 	using Base::at;
+
 public:
 	using Point = T;
 
 	Quadrilateral() = default;
 	Quadrilateral(T tl, T tr, T br, T bl) : Base{tl, tr, br, bl} {}
 	template <typename U>
-	Quadrilateral(PointT<U> tl, PointT<U> tr, PointT<U> br, PointT<U> bl)
-		: Quadrilateral(Point(tl), Point(tr), Point(br), Point(bl))
+	Quadrilateral(PointT<U> tl, PointT<U> tr, PointT<U> br, PointT<U> bl) : Quadrilateral(Point(tl), Point(tr), Point(br), Point(bl))
 	{}
 
 	constexpr Point topLeft() const noexcept { return at(0); }
@@ -50,8 +50,7 @@ using QuadrilateralI = Quadrilateral<PointI>;
 template <typename PointT = PointF>
 Quadrilateral<PointT> Rectangle(int width, int height, typename PointT::value_t margin = 0)
 {
-	return {
-		PointT{margin, margin}, {width - margin, margin}, {width - margin, height - margin}, {margin, height - margin}};
+	return {PointT{margin, margin}, {width - margin, margin}, {width - margin, height - margin}, {margin, height - margin}};
 }
 
 template <typename PointT = PointF>
@@ -74,8 +73,7 @@ bool IsConvex(const Quadrilateral<PointT>& poly)
 
 	typename PointT::value_t m = INFINITY, M = 0;
 
-	for(int i = 0; i < N; i++)
-	{
+	for (int i = 0; i < N; i++) {
 		auto d1 = poly[(i + 2) % N] - poly[(i + 1) % N];
 		auto d2 = poly[i] - poly[(i + 1) % N];
 		auto cp = cross(d1, d2);
@@ -96,8 +94,8 @@ bool IsConvex(const Quadrilateral<PointT>& poly)
 	// where one corner is almost in line with two others. The M/m ratio is below 2
 	// for the complete existing sample set. For very "skewed" QRCodes a value of
 	// around 3 is realistic. A value of 14 has been observed to trigger the
-	// instability.
-	return M / m < 4.0;
+	// instability. Allow more skew by increasing the ratio threshold.
+	return M / m < 6.0;
 }
 
 template <typename PointT>
@@ -173,5 +171,4 @@ std::string ToString(const Quadrilateral<PointT<T>>& points)
 	return res;
 }
 
-} // ZXing
-
+} // namespace ZXing
